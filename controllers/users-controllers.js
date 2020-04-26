@@ -30,7 +30,7 @@ const signup = async (req, res, next) => {
 
   let existingUser;
   try {
-    existingUser = await User.findOne({ email: email })
+    existingUser = await User.findOne({ email: email });
   } catch (err) {
     const error = new HttpError(
       'Signing up failed, please try again later.',
@@ -38,7 +38,7 @@ const signup = async (req, res, next) => {
     );
     return next(error);
   }
-  
+
   if (existingUser) {
     const error = new HttpError(
       'User exists already, please login instead.',
@@ -46,11 +46,11 @@ const signup = async (req, res, next) => {
     );
     return next(error);
   }
-  
+
   const createdUser = new User({
     name,
     email,
-    image: 'https://randomuser.me/api/portraits/men/46.jpg',
+    image: 'https://live.staticflickr.com/7631/26849088292_36fc52ee90_b.jpg',
     password,
     places: []
   });
@@ -59,13 +59,13 @@ const signup = async (req, res, next) => {
     await createdUser.save();
   } catch (err) {
     const error = new HttpError(
-      'Signing up failed, please try again.',
+      'Signing up failed, please try again later.',
       500
     );
     return next(error);
   }
 
-  res.status(201).json({user: createdUser.toObject({ getters: true })});
+  res.status(201).json({ user: createdUser.toObject({ getters: true }) });
 };
 
 const login = async (req, res, next) => {
