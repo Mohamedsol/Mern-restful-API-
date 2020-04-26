@@ -34,23 +34,30 @@ const getPlaceById = async (req, res, next) => {
 const getPlacesByUserId = async (req, res, next) => {
   const userId = req.params.uid;
 
-  let places;
+  // let places;
+  let userWithPlaces;
   try {
-   places = await Place.find( { creator: userId });
-  } catch (err){
-    const error = HttpError(
-      'Fetching places failed, please try again later.', 500
-    )
-    return next(error)
+    userWithPlaces = await User.findById(userId).populate('places');
+  } catch (err) {
+    const error = new HttpError(
+      'Fetching places failed, please try again later',
+      500
+    );
+    return next(error);
   }
 
-  if (!places || places.length === 0) {
+  // if (!places || places.length === 0) {
+  if (!userWithPlaces || userWithPlaces.places.length === 0) {
     return next(
       new HttpError('Could not find places for the provided user id.', 404)
     );
   }
 
-  res.json({ places: places.map( place => place.toObject( { getters: true})) });
+  res.json({
+    places: userWithPlaces.places.map(place =>
+      place.toObject({ getters: true })
+    )
+  });
 };
 
 const createPlace = async (req, res, next) => {
@@ -74,7 +81,7 @@ const createPlace = async (req, res, next) => {
     description,
     address,
     location: coordinates,
-    image: 'https://randomuser.me/api/portraits/men/46.jpg',
+    image: 'https://cdn.vox-cdn.com/thumbor/JrYpHTzbE9qSu85id9CSkQhs7dM=/0x0:2000x1333/1200x800/filters:focal(840x507:1160x827)/cdn.vox-cdn.com/uploads/chorus_image/image/65018226/151006_19_00_22_5DSR9489.0.jpg',
     creator
   });
 
@@ -151,23 +158,37 @@ const updatePlace = async (req, res, next) => {
 
 const deletePlace = async (req, res, next) => {
   const placeId = req.params.pid;
+
   let place;
   try {
-   place = await Place.findById(placeId);
-  } catch (err){
-    const error = HttpError(
-      'Something went wrong, could not delete place.', 500
-    )
-    return next(error)
-  };
+    place = await Place.findById(placeId).populate('creator');
+  } catch (err) {
+    const error = new HttpError(
+      'Something went wrong, could not delete place.',
+      500
+    );
+    return next(error);
+  }
+
+  if (!place) {
+    const error = new HttpError('Could not find place for this id.', 404);
+    return next(error);
+  }
+
   try {
-    await place.remove();
-   } catch (err){
-     const error = HttpError(
-       'Something went wrong, could not delete place.', 500
-     )
-     return next(error)
-   }
+    const sess = await mongoose.startSession();
+    sess.startTransaction();
+    await place.remove({ session: sess });
+    place.creator.places.pull(place);
+    await place.creator.save({ session: sess });
+    await sess.commitTransaction();
+  } catch (err) {
+    const error = new HttpError(
+      'Something went wrong, could not delete place.',
+      500
+    );
+    return next(error);
+  }
 
   res.status(200).json({ message: 'Deleted place.' });
 };

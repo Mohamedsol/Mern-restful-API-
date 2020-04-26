@@ -10,7 +10,18 @@ const app = express();
 
 app.use(bodyParser.json());
 
-app.use('/api/places', placesRoutes); // => /api/places...
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'Origin, X-Requested-With, Content-Type, Accept, Authorization'
+  );
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE');
+
+  next();
+});
+
+app.use('/api/places', placesRoutes);
 app.use('/api/users', usersRoutes);
 
 app.use((req, res, next) => {
@@ -22,17 +33,18 @@ app.use((error, req, res, next) => {
   if (res.headerSent) {
     return next(error);
   }
-  res.status(error.code || 500)
-  res.json({message: error.message || 'An unknown error occurred!'});
+  res.status(error.code || 500);
+  res.json({ message: error.message || 'An unknown error occurred!' });
 });
 
-mongoose.connect('mongodb+srv://Mohamed:99660010@mern-gf48k.mongodb.net/places?retryWrites=true&w=majority')
-.then(() => {
-  app.listen(5000);
-  console.log('db is connected')
-}).catch(err =>{
-  console.log(err)
-})
-
-
-
+mongoose
+  .connect(
+    `mongodb+srv://Mohamed:99660010@mern-gf48k.mongodb.net/mern?retryWrites=true&w=majority`
+  )
+  .then(() => {
+    app.listen(5000);
+    console.log('db connected')
+  })
+  .catch(err => {
+    console.log(err);
+  });
